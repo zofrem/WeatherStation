@@ -11,19 +11,20 @@
 OneWire oneWire(6);
 DallasTemperature outsideTemp(&oneWire);
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+const uint8_t DAY_SAMPLES = 240; // sample each six minute
+const uint8_t DISPLAY_BARS = 16;
 BarChars* barChar = new BarChars(lcd);  
-LiquidCrystalChart* chartBar = new LiquidCrystalChart(lcd, *barChar, 0, 1, 1, 16);
-LoopRecorder<float>* currentTempRec = new LoopRecorder<float>(16);
-LoopRecorder<float>* dailyTempRec = new LoopRecorder<float>(16);
+LiquidCrystalChart* chartBar = new LiquidCrystalChart(lcd, *barChar, 0, 1, 1, DISPLAY_BARS);
+LoopRecorder<float>* dailyTempRec = new LoopRecorder<float>(DAY_SAMPLES);
 
-float cuttentAverageTemp = 0;
+float currentTemp = 0;
 float difference = 0;
-uint8_t hourSamples[16];
+uint8_t dailyGraph[DISPLAY_BARS];
 
 void setup(void)
 {
-    for(uint8_t i = 0; i <=16; ++i)
-      hourSamples[i] = 0;
+    for(uint8_t i = 0; i < DISPLAY_BARS; ++i)
+      dailyGraph[i] = 0;
     Scheduler.startLoop(dataOutput);
     Scheduler.startLoop(hourUpdate);
     Serial.begin(9600);
@@ -74,13 +75,12 @@ float getMinValue(const LoopRecorder<float>& data, const uint8_t samplesCount)
 
 void loop(void)
 {  
-  currentTempRec->pushBack(outsideTemp.getTempCByIndex(0));
-  cuttentAverageTemp = getAverageValue(*currentTempRec, 16);
-  chartBar->plotChart(hourSamples);  
+  currentTemp = outsideTemp.getTempCByIndex(0);
+  chartBar->plotChart(dailyGraph);  
    
    outsideTemp.requestTemperatures();
    lcd.setCursor(0,0);
-   lcd.print(cuttentAverageTemp);
+   lcd.print(currentTemp);
    lcd.setCursor(5,0);
    lcd.print((char)0xDF);
    lcd.setCursor(6,0);
@@ -91,31 +91,67 @@ void loop(void)
    lcd.print((char)0xDF);
    lcd.setCursor(15,0);
    lcd.print((char)0x43);
+   Scheduler.delay(500);   
    yield();
 }
 
 
 void dataOutput()
 {
-  Serial.print("cuttentAverageTemp:");
-  Serial.println(cuttentAverageTemp);
+  Serial.print("currentTemp:");
+  Serial.println(currentTemp);
   Scheduler.delay(1000);
   yield(); 
 }
 
 void hourUpdate()
 {
-  dailyTempRec->pushBack(cuttentAverageTemp);
-  float minValue = getMinValue(*dailyTempRec, 16);
-  difference = getMaxValue(*dailyTempRec, 16) - minValue; 
-  for(uint8_t i = 0; i < 16; ++i)
-  {
-    float value = 0;
-    uint8_t inversIndex = 15 - i;
-    if(dailyTempRec->getLastSample(i, value))
-      hourSamples[inversIndex] = 255 * ((value - minValue)/difference);
-    else
-     hourSamples[inversIndex] = 0;
+  dailyTempRec->pushBack(currentTemp);
+  float minValue = getMinValue(*dailyTempRec, DAY_SAMPLES);
+  float maxValue = getMaxValue(*dailyTempRec, DAY_SAMPLES);
+  difference = maxValue - minValue;  
+  uint8_t samplesAtBar = DAY_SAMPLES / DISPLAY_BARS;  
+    for(uint8_t bar = 0; bar < DISPLAY_BARS; ++bar)
+    {
+      uint8_t leftSample = samplesAtBar * bar;
+      uint8_t rightSample = leftSample + samplesAtBar;
+      float averageForBar = 0;
+      float sumOfAll = 0;
+      uint8_t count = 0;
+      bool foundMaxBar = false;
+      bool foundMinBar = false;
+      for(uint8_t sample = leftSample; sample < rightSample; ++sample)
+      { // calculate average with more samples to one bar          
+        float value = 0;
+        if(dailyTempRec->getLastSample(sample, value))
+        {
+          sumOfAll += value;
+          ++count;
+          foundMaxBar = value == maxValue;
+          foundMinBar = value == minValue;
+        }   
+      }
+      if(count > 0 && sumOfAll > 0)
+        averageForBar = sumOfAll / count;
+      else
+        averageForBar = 0;
+      Serial.println(averageForBar, 2);
+      Serial.print('\n');
+      uint8_t inversIndex = DISPLAY_BARS - 1 - bar;
+      if(count == samplesAtBar)
+      {
+        uint8_t level = 255 * ((averageForBar - minValue) / difference);
+        if(foundMaxBar && foundMinBar)
+          dailyGraph[inversIndex] = level; //almost impossible
+        else if(foundMaxBar)
+          dailyGraph[inversIndex] = 255;   //optimise fit to above level
+        else if(foundMinBar)
+          dailyGraph[inversIndex] = 0;     //optimise fit to below level
+        else
+          dailyGraph[inversIndex] = level; //standard scenario        
+      }      
+      else
+         dailyGraph[inversIndex] = 0;      //empty data storage
   }
 
   Scheduler.delay(1000);
