@@ -135,12 +135,14 @@ void loop(void)
     if(menuPosition <= 1)
       showMainScreen();
     else if(menuPosition == 2)
-     showMinMaxScreen();
+      showDayComparationScreen();
     else if(menuPosition == 3)
-     showLongTermMinMaxScreen();
+     showMinMaxScreen();
     else if(menuPosition == 4)
-      showGraphScreen(); 
+     showLongTermMinMaxScreen();
     else if(menuPosition == 5)
+      showGraphScreen(); 
+    else if(menuPosition == 6)
       showInfoScreen();
     else
     {
@@ -254,6 +256,31 @@ void showInfoScreen()
   clearChars(8, 16 - digits, 1);
   lcd.setCursor(16 - digits, 1);  
   lcd.print(days);  
+}
+
+void showDayComparationScreen()
+{
+  lcd.setCursor(0,0);
+  float dayAgoTemp = 0;
+  float dayDiffTemp = 0;
+  if(dailyTempRec->getLastSample(DAY_SAMPLES - 1 , dayAgoTemp)) 
+  {
+    if(dayAgoTemp < currentTemp)
+    {
+      lcd.print("Dnes teplejsie");
+      dayDiffTemp = currentTemp - dayAgoTemp; 
+    } 
+    else
+    {
+      lcd.print("Dnes chladnejsie");
+      dayDiffTemp = dayAgoTemp - currentTemp;
+    }
+    showCelsiusTemperatureLeft(0, 1, dayDiffTemp);    
+  }
+  else
+  {
+    lcd.print("Pockaj 24 hodin ");  
+  }
 }
 
 void showWelcomeScreen()
