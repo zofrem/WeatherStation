@@ -1,6 +1,5 @@
-#include <OneWire.h>
-#include <DallasTemperature.h>
-#include <LiquidCrystal.h>
+#include "Ds18b20.h"
+#include "LiquidCrystal_I2C.h"
 #include <inttypes.h>
 #include "BarChars.h"
 #include "LoopRecorder.h"
@@ -9,21 +8,18 @@
 #include "Button.h"
 #include "MemoryFree.h"
 
-
-OneWire oneWire(8);
-DallasTemperature outsideTemp(&oneWire);
-LiquidCrystal lcd(9, 10, 5, 4, 3, 2);
+Ds18b20* outsideTemp = new Ds18b20(PB11);
+LiquidCrystal_I2C* lcd = new LiquidCrystal_I2C(0x3F, 20, 4);
 const uint8_t DAY_SAMPLES = 240; // sample each six minute
-const uint8_t DISPLAY_BARS = 16;
-const uint8_t DISPLAY_ROWS = 2;
-const uint8_t BACKLIGHT = 13;
-BarChars* barChar = new BarChars(lcd);  
-LiquidCrystalChart* chartBar = new LiquidCrystalChart(lcd, *barChar, 0, 1, 1, DISPLAY_BARS);
-LiquidCrystalChart* bigChartBar = new LiquidCrystalChart(lcd, *barChar, 0, 0, 2, DISPLAY_BARS);
+const uint8_t DISPLAY_BARS = 20;
+const uint8_t DISPLAY_ROWS = 4;
+BarChars* barChar =  new BarChars(*lcd);
+LiquidCrystalChart* chartBar = new LiquidCrystalChart(*lcd, *barChar, 0, 1, 3, DISPLAY_BARS);
+LiquidCrystalChart* bigChartBar = new LiquidCrystalChart(*lcd, *barChar, 0, 0, 4, DISPLAY_BARS);
 LoopRecorder<float>* dailyTempRec = new LoopRecorder<float>(DAY_SAMPLES);
-LoopTimer* measure = new LoopTimer(10000); //360000
+LoopTimer* measure = new LoopTimer(1000); //360000
 LoopTimer* control = new LoopTimer(5000);  //10000
-Button* button = new Button(6);
+Button* button = new Button(PB10);
 uint8_t menuPosition = 0;
 
 bool firstRun = true;
@@ -38,11 +34,11 @@ uint8_t dailyGraph[DISPLAY_BARS];
 
 void setup(void)
 {
+    lcd->begin();
+    barChar->createBarLevels();
     for(uint8_t i = 0; i < DISPLAY_BARS; ++i)
-    dailyGraph[i] = 0;
+      dailyGraph[i] = 0;
     Serial.begin(9600);
-    lcd.begin(16, 2);
-    outsideTemp.begin();
 }
 
 float getAverageValue(const LoopRecorder<float>& data, const uint8_t samplesCount)
@@ -99,10 +95,10 @@ void loop(void)
 { 
   if(firstRun)
   {
-    digitalWrite(BACKLIGHT, HIGH);
+    lcd->backlight();
     showWelcomeScreen();
     delay(2000); // mainly delay is requried DS18B20 get error 85 degrees at the power boot;
-    digitalWrite(BACKLIGHT, LOW);
+    lcd->noBacklight();
     firstRun = false;
   }
   bool updateScreen = false;
@@ -128,9 +124,9 @@ void loop(void)
   if(updateScreen)
   {
     if(menuPosition > 0)
-      digitalWrite(BACKLIGHT, HIGH);
+      lcd->backlight();
     else
-      digitalWrite(BACKLIGHT, LOW); 
+      lcd->noBacklight();
       
     if(menuPosition <= 1)
       showMainScreen();
@@ -155,8 +151,7 @@ void loop(void)
 
 void hourUpdate()
 {
-  outsideTemp.requestTemperatures();
-  currentTemp = outsideTemp.getTempCByIndex(0);
+  currentTemp = outsideTemp->getCelsiusTemp(0);
   getlongTermMinMax();
   dailyTempRec->pushBack(currentTemp);
   minValue = getMinValue(*dailyTempRec, DAY_SAMPLES);
@@ -217,23 +212,23 @@ void showMainScreen()
 
 void showMinMaxScreen()
 {
-  lcd.setCursor(0,0);
-  lcd.print("Mini_24:");
+  lcd->setCursor(0,0);
+  lcd->printstr("Mini_24:");
   showCelsiusTemperatureRight(8, 0, minValue);
   
-  lcd.setCursor(0,1);
-  lcd.print("Maxi_24:");
+  lcd->setCursor(0,1);
+  lcd->printstr("Maxi_24:");
   showCelsiusTemperatureRight(8, 1, maxValue);  
 }
 
 void showLongTermMinMaxScreen()
 {
-  lcd.setCursor(0,0);
-  lcd.print("Minimal:");
+  lcd->setCursor(0,0);
+  lcd->printstr("Minimal:");
   showCelsiusTemperatureRight(8, 0, longTermMin);
   
-  lcd.setCursor(0,1);
-  lcd.print("Maximal:");
+  lcd->setCursor(0,1);
+  lcd->printstr("Maximal:");
   showCelsiusTemperatureRight(8, 1, longTermMax);   
 }
 void showGraphScreen()
@@ -242,71 +237,71 @@ void showGraphScreen()
 }
 void showInfoScreen()
 {
-  lcd.setCursor(0,0);
-  lcd.print("Merania:");
+  lcd->setCursor(0,0);
+  lcd->printstr("Merania:");
   uint8_t digits = numDigits(countOfMeasures);
   clearChars(8, 16 - digits, 0);
-  lcd.setCursor(DISPLAY_BARS - digits, 0);  
-  lcd.print(countOfMeasures);
+  lcd->setCursor(DISPLAY_BARS - digits, 0);
+  lcd->print(countOfMeasures);
 
-  lcd.setCursor(0,1);
-  lcd.print("MeraDni:");
+  lcd->setCursor(0,1);
+  lcd->printstr("MeraDni:");
   uint32_t days = countOfMeasures / DAY_SAMPLES;
   digits = numDigits(days);
   clearChars(8, 16 - digits, 1);
-  lcd.setCursor(16 - digits, 1);  
-  lcd.print(days);  
+  lcd->setCursor(16 - digits, 1);
+  lcd->print(days);
 }
 
 void showDayComparationScreen()
 {
-  lcd.setCursor(0,0);
+  lcd->setCursor(0,0);
   float dayAgoTemp = 0;
   float dayDiffTemp = 0;
   if(dailyTempRec->getLastSample(DAY_SAMPLES - 1 , dayAgoTemp)) 
   {
     if(dayAgoTemp < currentTemp)
     {
-      lcd.print("Dnes teplejsie");
+      lcd->printstr("Dnes teplejsie");
       dayDiffTemp = currentTemp - dayAgoTemp; 
     } 
     else
     {
-      lcd.print("Dnes chladnejsie");
+      lcd->printstr("Dnes chladnejsie");
       dayDiffTemp = dayAgoTemp - currentTemp;
     }
     showCelsiusTemperatureLeft(0, 1, dayDiffTemp);    
   }
   else
   {
-    lcd.print("Pockaj 24 hodin ");  
+    lcd->printstr("Pockaj 24 hodin ");
   }
 }
 
 void showWelcomeScreen()
 {
-  lcd.setCursor(0,0);
-  lcd.print("Jozef Lukac 2017");
-  lcd.setCursor(0,1);
-  lcd.print("Teplomer v1.0");  
+  lcd->setCursor(0,0);
+  lcd->printstr("Jozef Lukac 2017");
+  lcd->setCursor(0,1);
+  lcd->printstr("Teplomer STM v1.1");
 }
 
 void showCelsiusTemperatureLeft(uint8_t xCursor, const uint8_t yCursor, const float& temperature)
 {
    uint8_t space = 0;
-   lcd.setCursor(xCursor,yCursor);
-   lcd.print(temperature);
+   lcd->setCursor(xCursor,yCursor);
+   lcd->print(temperature);
    xCursor += 4;
    if((10.00 <= temperature) || (-10.00 < temperature && temperature < 0))
      space++;
    else if(temperature <= -10.00)
      space += 2; 
    xCursor += space;
-   lcd.setCursor(xCursor, yCursor);
-   lcd.print((char)0xDF);
+   lcd->setCursor(xCursor, yCursor);
+   lcd->print((char)0xDF);
    xCursor++;
-   lcd.setCursor(xCursor, yCursor);
-   lcd.print((char)0x43);
+   lcd->setCursor(xCursor, yCursor);
+   lcd->print((char)0x43);
    xCursor++;
    clearChars(xCursor, xCursor + (2 - space), yCursor);
 }
@@ -319,20 +314,20 @@ void showCelsiusTemperatureRight(uint8_t xCursor, const uint8_t yCursor, const f
    else if(0 <= temperature && temperature < 10.00)
      whiteSpace += 2;
    clearChars(xCursor, xCursor + whiteSpace, yCursor);      
-   lcd.setCursor(xCursor + whiteSpace, yCursor);
-   lcd.print(temperature);
-   lcd.setCursor(xCursor + 6, yCursor);
-   lcd.print((char)0xDF);
-   lcd.setCursor(xCursor + 7, yCursor);
-   lcd.print((char)0x43);
+   lcd->setCursor(xCursor + whiteSpace, yCursor);
+   lcd->print(temperature);
+   lcd->setCursor(xCursor + 6, yCursor);
+   lcd->print((char)0xDF);
+   lcd->setCursor(xCursor + 7, yCursor);
+   lcd->print((char)0x43);
 }
 
 void clearChars(const uint8_t fromX, const uint8_t toX, const uint8_t line)
 {
   for(uint8_t i = fromX; i < toX; ++i)
   {
-    lcd.setCursor(i, line);
-    lcd.print((char)0x20);
+    lcd->setCursor(i, line);
+    lcd->print((char)0x20);
   }  
 }
 

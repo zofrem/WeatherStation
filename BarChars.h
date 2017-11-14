@@ -2,7 +2,7 @@
 #define BARCHARS_H
 
 #include <inttypes.h>
-#include <LiquidCrystal.h>
+#include "LiquidCrystal_I2C.h"
 
 /////////////////////////////////////////////////////////
 /// BarChars
@@ -11,15 +11,15 @@
 
 class BarChars {
   public:
-    BarChars(LiquidCrystal& lcd);
+    BarChars(LiquidCrystal_I2C& lcd);
     ~BarChars();
+    void createBarLevels();
     void writeBarLevel(const uint8_t level);
     uint8_t getCharVerticalDimension();
 
   private:
     BarChars(const BarChars& paste);
-    void createBarLevels();
-    LiquidCrystal& mLcd;
+    LiquidCrystal_I2C& mLcd;
     uint8_t* mCharLevels;
     const uint8_t mCHAR_COUNT;
     const uint8_t mCHAR_Y_DIMENSION;

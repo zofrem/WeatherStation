@@ -8,7 +8,7 @@
 /// chartHeight & chartBars dimensions of chart
 /////////////////////////////////////////////////////////
 
-LiquidCrystalChart::LiquidCrystalChart(LiquidCrystal& lcd, BarChars& barChars, const uint8_t posChartX, const uint8_t posChartY, const uint8_t chartHeight, const uint8_t chartBars)
+LiquidCrystalChart::LiquidCrystalChart(LiquidCrystal_I2C& lcd, BarChars& barChars, const uint8_t posChartX, const uint8_t posChartY, const uint8_t chartHeight, const uint8_t chartBars)
 : mLcd(lcd), mChars(barChars), mChartPosX(posChartX), mChartPosY(posChartY), mChartHeight(chartHeight), mChartBars(chartBars)
 {
   mSegmentAccuracy = 0x100 / (mChartHeight * mChars.getCharVerticalDimension());

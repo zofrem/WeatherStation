@@ -5,10 +5,9 @@
 /// generate and display bar chars at the display hd44780
 /////////////////////////////////////////////////////////
 
-BarChars::BarChars(LiquidCrystal& lcd) : mLcd(lcd), mCHAR_COUNT(7), mCHAR_Y_DIMENSION(8)
+BarChars::BarChars(LiquidCrystal_I2C& lcd) : mLcd(lcd), mCHAR_COUNT(7), mCHAR_Y_DIMENSION(8)
 {
   mCharLevels = new uint8_t[mCHAR_COUNT * mCHAR_Y_DIMENSION];  // used simple vector than two dimensional allocation
-  createBarLevels();
 }
 
 BarChars::~BarChars()

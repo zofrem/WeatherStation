@@ -2,7 +2,7 @@
 #define LIQUIDCRYSTALCHART_H
 
 #include <inttypes.h>
-#include <LiquidCrystal.h>
+#include "LiquidCrystal_I2C.h"
 #include "BarChars.h"
 
 /////////////////////////////////////////////////////////
@@ -15,12 +15,12 @@
 
 class LiquidCrystalChart {
   public:
-    LiquidCrystalChart(LiquidCrystal& lcd, BarChars& barChars, uint8_t posX, uint8_t posY, uint8_t height, uint8_t bars);
+    LiquidCrystalChart(LiquidCrystal_I2C& lcd, BarChars& barChars, uint8_t posX, uint8_t posY, uint8_t height, uint8_t bars);
     void plotChart(uint8_t* chartData);
     
   private:
     LiquidCrystalChart(const LiquidCrystalChart& paste);
-    LiquidCrystal& mLcd;
+    LiquidCrystal_I2C& mLcd;
     BarChars& mChars;
     const uint8_t mChartPosX;
     const uint8_t mChartPosY;
