@@ -1,7 +1,6 @@
 #include "Ds18b20.h"
 #include "LiquidCrystal_I2C.h"
 #include <inttypes.h>
-#include <vector>
 #include "BarChars.h"
 #include "LoopRecorder.h"
 #include "LoopTimer.h"
@@ -18,16 +17,16 @@ const uint8_t DISPLAY_ROWS = 4;
 const uint8_t MENU_SCREENS = 4;
 BarChars* barChar =  new BarChars(*lcd);
 LiquidCrystalChart* chartBar = new LiquidCrystalChart(*lcd, *barChar, 0, 1, 3, DISPLAY_BARS);
-LoopRecorder<float>* dailyTempOutRec = new LoopRecorder<float>(DAY_SAMPLES);
+LoopRecorder<float>* dailyTempRec = new LoopRecorder<float>(DAY_SAMPLES);
 LoopRecorder<float>* dailyPressRec = new LoopRecorder<float>(DAY_SAMPLES);
-LoopRecorder<float>* dailyTempInRec = new LoopRecorder<float>(DAY_SAMPLES);
-LoopTimer* measure = new LoopTimer(4000); //360000
-LoopTimer* control = new LoopTimer(10000);  //10000
+LoopRecorder<float>* dailyHumiRec = new LoopRecorder<float>(DAY_SAMPLES);
+LoopTimer* measure = new LoopTimer(5000); //360000
+LoopTimer* control = new LoopTimer(5000);  //10000
 Button* buttTemp = new Button(PB12);
 Button* buttPress = new Button(PB13);
 Button* buttHumi = new Button(PB14);
 uint8_t menuPosition = 0; // pages
-uint8_t menuParameter = 0; // 0 = temp out, 1 = pressure, 2 = temp in
+uint8_t menuParameter = 0; // 0 = temp, 1 = pressure, 2 = humidity
 
 bool firstRun = true;
 float currentValues[3];
@@ -37,20 +36,16 @@ float maxValues[3];
 float longTermMin[3];
 float longTermMax[3]; 
 uint32_t countOfMeasures = 0;
-uint8_t dailyGraph[3][DISPLAY_BARS];
-
-#define KEY(a,b)  ( (a<<8) | b )
+uint8_t dailyGraph[DISPLAY_BARS];
 
 void setup(void)
 {
-
     pinMode(LED_BUILTIN, OUTPUT);
     bmp->begin();
     lcd->begin();
     barChar->createBarLevels();
     for(uint8_t i = 0; i < DISPLAY_BARS; ++i)
-      for(uint8_t j = 0; j < 3; ++j)
-        dailyGraph[j][i] = 0;
+      dailyGraph[i] = 0;
     Serial.begin(9600);
     for(uint8_t i = 0; i < 3; ++i)
     {
@@ -61,10 +56,10 @@ void setup(void)
     }
     longTermMin[0] = 200;
     longTermMax[0] = -200;
-    longTermMin[1] = 2000000;
-    longTermMax[1] = -2000000;
-    longTermMin[2] = 2000000;
-    longTermMax[2] = -2000000;
+    longTermMin[1] = 20000;
+    longTermMax[1] = -20000;
+    longTermMin[2] = 20000;
+    longTermMax[2] = -20000; 
 }
 
 float getAverageValue(const LoopRecorder<float>& data, const uint8_t samplesCount)
@@ -84,7 +79,7 @@ float getAverageValue(const LoopRecorder<float>& data, const uint8_t samplesCoun
 
 float getMaxValue(const LoopRecorder<float>& data, const uint8_t samplesCount)
 {
-  float maxValue = -2000000;
+  float maxValue = -200;
   float value;
   for(uint8_t i = 0; i < samplesCount; ++i)
   {
@@ -97,7 +92,7 @@ float getMaxValue(const LoopRecorder<float>& data, const uint8_t samplesCount)
 
 float getMinValue(const LoopRecorder<float>& data, const uint8_t samplesCount)
 {
-  float minValue = 2000000;
+  float minValue = 200;
   float value; 
   for(uint8_t i = 0; i < samplesCount; ++i)
   {
@@ -110,6 +105,8 @@ float getMinValue(const LoopRecorder<float>& data, const uint8_t samplesCount)
 
 void getlongTermMinMax(uint8_t i)
 {
+  if(i == 0)
+    countOfMeasures++;
   if(currentValues[i] > longTermMax[i])
     longTermMax[i] = currentValues[i];
   if(currentValues[i] < longTermMin[i])
@@ -117,7 +114,7 @@ void getlongTermMinMax(uint8_t i)
 }
 
 void loop(void)
-{  
+{ 
   bool measureUpdate = false;
   showBeginScreenProcedure();
     
@@ -125,33 +122,27 @@ void loop(void)
   {
     hourUpdate();
     measureUpdate = true;
-  } 
+  }
+  
+
     
   if(buttonMenuMovementLogic() || measureUpdate)
-  {
-    backlightLogic();
-    if(menuPosition == 0)
-      showTempOutMainScreen();
-    else if(KEY(menuParameter, menuPosition) == KEY(0,1))
-      showTempOutMainScreen();    
-    else if(KEY(menuParameter, menuPosition) == KEY(1,1))
-      showPressureMainScreen();
-    else if(KEY(menuParameter, menuPosition) == KEY(2,1))
-      showTempInMainScreen();
-    else if(KEY(menuParameter, menuPosition) == KEY(0,2))
-      showTempOutDayComparationScreen();
-    else if(KEY(menuParameter, menuPosition) == KEY(1,2))
-      showPressDayComparationScreen();
-    else if(KEY(menuParameter, menuPosition) == KEY(2,2))
-      showTempInDayComparationScreen();
-    else if(KEY(menuParameter, menuPosition) == KEY(0,3))
-      showMinMaxTempOutScreen();
-    else if(KEY(menuParameter, menuPosition) == KEY(1,3))
-      showMinMaxPressScreen();
-    else if(KEY(menuParameter, menuPosition) == KEY(2,3))
-      showMinMaxTempInScreen();
-    else
+  {     
+    if(menuPosition <= 1)
+    {
+      if(menuParameter == 0)
+        showTempMainScreen();
+      else
+        showPressureMainScreen();
+    }
+    else if(menuPosition == 2)
+      showDayComparationScreen();
+    else if(menuPosition == 3)
+     showMinMaxScreen();
+    else if(menuPosition == 4)
       showInfoScreen();
+    lcd->setCursor(0,3);
+    lcd->print(menuPosition);
   }
 }
 
@@ -181,10 +172,14 @@ bool buttonMenuMovementLogic()
   if(control->timer())
   {
     menuPosition = 0;
-    menuParameter = 0;
     updateScreen = true;
   } 
-  
+
+  if(menuPosition > 0)
+    lcd->backlight();
+  else
+    lcd->noBacklight();
+    
   if(pressedTemp || pressedPress || pressedHumi)
   {
     control->resetTimer();
@@ -220,40 +215,19 @@ bool buttonMenuMovementLogic()
         menuParameter = 2;
       }
     }
-  }  
+  }
+  
   return updateScreen;
-}
-
-void backlightLogic()
-{
-  if(menuPosition > 0)
-    lcd->backlight();
-  else
-    lcd->noBacklight();
 }
 
 void hourUpdate()
 {
   currentValues[0] = outsideTemp->getCelsiusTemp(0);
-  currentValues[1] = bmp->readPressure();
-  currentValues[2] = bmp->readTemperature(); //todo future Humi
-  
-  updateGraphAndValues(*dailyTempOutRec, 0);
-  updateGraphAndValues(*dailyPressRec, 1);
-  updateGraphAndValues(*dailyTempInRec, 2);   
-}
-
-void updateGraphAndValues(LoopRecorder<float>& dailyRec, const uint8_t param)
-{
-  dailyRec.pushBack(currentValues[param]);
-  if(param == 0)
-    countOfMeasures++;
-  getlongTermMinMax(param);
-  minValues[param] = getMinValue(dailyRec, DAY_SAMPLES);
-  maxValues[param] = getMaxValue(dailyRec, DAY_SAMPLES);
-  differences[param] = maxValues[param] - minValues[param];
-  calculateMedian(dailyRec); 
-   
+  getlongTermMinMax(0);
+  dailyTempRec->pushBack(currentValues[0]);
+  minValues[0] = getMinValue(*dailyTempRec, DAY_SAMPLES);
+  maxValues[0] = getMaxValue(*dailyTempRec, DAY_SAMPLES);
+  differences[0] = maxValues[0] - minValues[0];  
   uint8_t samplesAtBar = DAY_SAMPLES / DISPLAY_BARS;  
   for(uint8_t bar = 0; bar < DISPLAY_BARS; ++bar)
   {
@@ -267,13 +241,13 @@ void updateGraphAndValues(LoopRecorder<float>& dailyRec, const uint8_t param)
     for(uint8_t sample = leftSample; sample < rightSample; ++sample)
     { // calculate average with more samples to one bar          
       float value = 0;
-      if(dailyRec.getLastSample(sample, value))
+      if(dailyTempRec->getLastSample(sample, value))
       {
         sumOfAll += value;
         ++count;
-        if(value == maxValues[param])
+        if(value == maxValues[0])
           foundMaxBar = true;
-        if(value == minValues[param]) 
+        if(value == minValues[0]) 
           foundMinBar = true;
       }   
     }
@@ -282,117 +256,53 @@ void updateGraphAndValues(LoopRecorder<float>& dailyRec, const uint8_t param)
     else
       averageForBar = 0;
     uint8_t inversIndex = DISPLAY_BARS - 1 - bar;
+    Serial.println(count);
     if(count == samplesAtBar)
     {
-      uint8_t level = 255 * ((averageForBar - minValues[param]) / differences[param]);
+      uint8_t level = 255 * ((averageForBar - minValues[0]) / differences[0]);
       if(foundMaxBar && foundMinBar)
-        dailyGraph[param][inversIndex] = level; //almost impossible
+        dailyGraph[inversIndex] = level; //almost impossible
       else if(foundMaxBar)
-        dailyGraph[param][inversIndex] = 255;   //optimise fit to above level
+        dailyGraph[inversIndex] = 255;   //optimise fit to above level
       else if(foundMinBar)
-        dailyGraph[param][inversIndex] = 0;     //optimise fit to below level
+        dailyGraph[inversIndex] = 0;     //optimise fit to below level
       else
-        dailyGraph[param][inversIndex] = level; //standard scenario        
+        dailyGraph[inversIndex] = level; //standard scenario        
     }      
     else
-      dailyGraph[param][inversIndex] = 0;      //empty data storage
-  }
+      dailyGraph[inversIndex] = 0;      //empty data storage
+  }   
 }
 
-void calculateMedian(LoopRecorder<float>& dailyRec)
-{
-  if(countOfMeasures >= DAY_SAMPLES)
-  {
-    std::vector<float> histogram;
-    for(uint8_t i = 0; i < DAY_SAMPLES; ++i)
-    {
-      float value = 0;
-      if(dailyRec.getLastSample(i, value))
-        histogram.push_back(value);
-    }
-    if(histogram.size() == DAY_SAMPLES)
-    {
-      
-    }
-  }  
-}
-void showTempOutMainScreen()
+void showTempMainScreen()
 {   
-   chartBar->plotChart(dailyGraph[0]);
+   chartBar->plotChart(dailyGraph);
    showCelsiusTemperatureLeft(0, 0, currentValues[0]);
-   showCelsiusTemperatureRight(12, 0, differences[0]);
+   showCelsiusTemperatureRight(8, 0, differences[0]);
 }
-
 void showPressureMainScreen()
 {   
-   chartBar->plotChart(dailyGraph[1]);
-   showPressureLeft(0, 0, currentValues[1]);
-   showPressureRight(13, 0, differences[1]);
+   chartBar->plotChart(dailyGraph);
+   showPressureRight(0, 0, bmp->readPressure());
 }
 
-void showTempInMainScreen()
-{   
-   chartBar->plotChart(dailyGraph[2]);
-   showCelsiusTemperatureLeft(0, 0, currentValues[2]);
-   showCelsiusTemperatureRight(12, 0, differences[2]);
-}
-
-
-void showMinMaxTempOutScreen()
+void showMinMaxScreen()
 {
   lcd->setCursor(0,0);
-  lcd->printstr("VonkuMini_24:");
-  showCelsiusTemperatureRight(12, 0, minValues[0]);
+  lcd->printstr("Mini_24:");
+  showCelsiusTemperatureRight(8, 0, minValues[0]);
   
   lcd->setCursor(0,1);
-  lcd->printstr("VonkuMaxi_24:");
-  showCelsiusTemperatureRight(12, 1, maxValues[0]);
+  lcd->printstr("Maxi_24:");
+  showCelsiusTemperatureRight(8, 1, maxValues[0]);
 
   lcd->setCursor(0,2);
-  lcd->printstr("VonkuMinimal:");
-  showCelsiusTemperatureRight(12, 2, longTermMin[0]);
+  lcd->printstr("Minimal:");
+  showCelsiusTemperatureRight(8, 2, longTermMin[0]);
   
   lcd->setCursor(0,3);
-  lcd->printstr("VonkuMaximal:");
-  showCelsiusTemperatureRight(12, 3, longTermMax[0]); 
-}
-
-void showMinMaxPressScreen()
-{
-  lcd->setCursor(0,0);
-  lcd->printstr("TlakMini_24:");
-  showPressureRight(13, 0, minValues[1]);
-  
-  lcd->setCursor(0,1);
-  lcd->printstr("TlakMaxi_24:");
-  showPressureRight(13, 1, maxValues[1]);
-
-  lcd->setCursor(0,2);
-  lcd->printstr("TlakMinimal:");
-  showPressureRight(13, 2, longTermMin[1]);
-  
-  lcd->setCursor(0,3);
-  lcd->printstr("TlakMaximal:");
-  showPressureRight(13, 3, longTermMax[1]); 
-}
-
-void showMinMaxTempInScreen()
-{
-  lcd->setCursor(0,0);
-  lcd->printstr("InterMini_24:");
-  showCelsiusTemperatureRight(12, 0, minValues[2]);
-  
-  lcd->setCursor(0,1);
-  lcd->printstr("InterMaxi_24:");
-  showCelsiusTemperatureRight(12, 1, maxValues[2]);
-
-  lcd->setCursor(0,2);
-  lcd->printstr("InterMinimal:");
-  showCelsiusTemperatureRight(12, 2, longTermMin[2]);
-  
-  lcd->setCursor(0,3);
-  lcd->printstr("InterMaximal:");
-  showCelsiusTemperatureRight(12, 3, longTermMax[2]); 
+  lcd->printstr("Maximal:");
+  showCelsiusTemperatureRight(8, 3, longTermMax[0]); 
 }
 
 void showInfoScreen()
@@ -400,7 +310,7 @@ void showInfoScreen()
   lcd->setCursor(0,0);
   lcd->printstr("Merania:");
   uint8_t digits = numDigits(countOfMeasures);
-  clearChars(8, DISPLAY_BARS - digits, 0);
+  clearChars(8, 16 - digits, 0);
   lcd->setCursor(DISPLAY_BARS - digits, 0);
   lcd->print(countOfMeasures);
 
@@ -408,88 +318,33 @@ void showInfoScreen()
   lcd->printstr("MeraDni:");
   uint32_t days = countOfMeasures / DAY_SAMPLES;
   digits = numDigits(days);
-  clearChars(8, DISPLAY_BARS - digits, 1);
-  lcd->setCursor(DISPLAY_BARS - digits, 1);
+  clearChars(8, 16 - digits, 1);
+  lcd->setCursor(16 - digits, 1);
   lcd->print(days);
-  clearChars(0, 20, 2);
-  clearChars(0, 20, 3);
 }
 
-void showTempOutDayComparationScreen()
+void showDayComparationScreen()
 {
   lcd->setCursor(0,0);
+  float dayAgoTemp = 0;
   float dayDiffTemp = 0;
-  if(dayComparationScreen(*dailyTempOutRec, 0, dayDiffTemp))
+  if(dailyTempRec->getLastSample(DAY_SAMPLES - 1 , dayAgoTemp)) 
   {
-    if(dayDiffTemp > 0)
-      lcd->printstr("Dnes teplejsie:");
-    else if(dayDiffTemp == 0)
-      lcd->printstr("Dnes ako vcera:");
+    if(dayAgoTemp < currentValues[0])
+    {
+      lcd->printstr("Dnes teplejsie");
+      dayDiffTemp = currentValues[0] - dayAgoTemp; 
+    } 
     else
     {
-      lcd->printstr("Dnes chladnejsie o");
-      dayDiffTemp *= -1;
+      lcd->printstr("Dnes chladnejsie");
+      dayDiffTemp = dayAgoTemp - currentValues[0];
     }
     showCelsiusTemperatureLeft(0, 1, dayDiffTemp);    
   }
   else
+  {
     lcd->printstr("Pockaj 24 hodin ");
-}
-
-void showPressDayComparationScreen()
-{
-  lcd->setCursor(0,0);
-  float dayDiffTemp = 0;
-  if(dayComparationScreen(*dailyPressRec, 1, dayDiffTemp))
-  {
-    if(dayDiffTemp > 0)
-      lcd->printstr("Dnes vyssi:");
-    else if(dayDiffTemp == 0)
-      lcd->printstr("Dnes ako vcera:");
-    else
-    {
-      lcd->printstr("Dnes nizsi:");
-      dayDiffTemp *= -1;
-    }
-    showCelsiusTemperatureLeft(0, 1, dayDiffTemp);    
-  }
-  else
-    lcd->printstr("Pockaj 24 hodin ");
-}
-
-void showTempInDayComparationScreen()
-{
-  lcd->setCursor(0,0);
-  float dayDiffTemp = 0;
-  if(dayComparationScreen(*dailyTempInRec, 2, dayDiffTemp)) 
-  {
-    if(dayDiffTemp > 0)
-      lcd->printstr("Dnes teplejsie:");
-    else if(dayDiffTemp == 0)
-      lcd->printstr("Dnes ako vcera:");
-    else
-    {
-      lcd->printstr("Dnes chladnejsie o");
-      dayDiffTemp *= -1;
-    }
-    showCelsiusTemperatureLeft(0, 1, dayDiffTemp);    
-  }
-  else
-    lcd->printstr("Pockaj 24 hodin ");
-}
-
-bool dayComparationScreen(LoopRecorder<float>& dailyRec, const uint8_t param, float& dayDiff)
-{
-  lcd->setCursor(0,0);
-  float dayAgo = 0;
-  if(dailyRec.getLastSample(DAY_SAMPLES - 1 , dayAgo)) 
-  {
-    dayDiff = currentValues[param] - dayAgo;
-    return true;  
-  }
-  else
-  {
-    return false; // wait 24 hours
   }
 }
 
@@ -539,24 +394,39 @@ void showCelsiusTemperatureRight(uint8_t xCursor, const uint8_t yCursor, const f
 
 void showPressureLeft(uint8_t xCursor, const uint8_t yCursor, const float& pressure)
 {
-  uint8_t digits = numDigits(pressure);
+  uint32_t showPressure = getPressureForDisplay(pressure);
   lcd->setCursor(xCursor, yCursor);
-  lcd->print(static_cast<int>(pressure));
-  lcd->setCursor(xCursor + digits, yCursor);
-  lcd->printstr("Pa");
-  //clearChars(xCursor + digits + 2, xCursor + 8, yCursor); 
+  showPressureValue(showPressure);  
+  lcd->setCursor(xCursor + numDigits(showPressure), yCursor);
+  lcd->printstr("hPa");  
 }
 
 void showPressureRight(uint8_t xCursor, const uint8_t yCursor, const float& pressure)
 {
-
-  uint8_t digits = numDigits(pressure);
-  lcd->setCursor(xCursor + 5 - digits, yCursor);
-  lcd->print(static_cast<int>(pressure));
-  clearChars(xCursor, xCursor + 5 - digits, yCursor);
-  lcd->setCursor(xCursor + 5, yCursor);
-  lcd->printstr("Pa");
+  uint32_t showPressure = getPressureForDisplay(pressure);
+  uint8_t digits = numDigits(showPressure);
+  lcd->setCursor(xCursor + 4 - digits, yCursor);
+  showPressureValue(showPressure);    
+  lcd->setCursor(xCursor + 4, yCursor);
+  lcd->printstr("hPa");
 }
+
+uint32_t getPressureForDisplay(const float& pressure)
+{
+  if(numDigits(pressure) >= 5 && numDigits(pressure) <= 6)
+    return static_cast<uint32_t>(pressure / 100);
+  else
+    return 0;
+}
+
+void showPressureValue(uint32_t showPressure)
+{
+  if(showPressure != 0)
+    lcd->print(showPressure);
+  else
+    lcd->print((char)0xF2);
+}
+
 
 void clearChars(const uint8_t fromX, const uint8_t toX, const uint8_t line)
 {
