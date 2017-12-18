@@ -1,5 +1,6 @@
 #include "LiquidCrystalChart.h"
 
+
 /////////////////////////////////////////////////////////
 /// LiquidCrystalChart
 /// display bar chart at the display hd44780
@@ -19,9 +20,9 @@ LiquidCrystalChart::LiquidCrystalChart(LiquidCrystal_I2C& lcd, BarChars& barChar
 /// display char bar chart based upon array data
 /////////////////////////////////////////////////////////
 
-void LiquidCrystalChart::plotChart(uint8_t* chartData)
+void LiquidCrystalChart::plotChart(const std::array<uint8_t, 20>& chartData)
 {
-  if(!chartData)
+  if(chartData.empty())
       return;
   for(uint8_t height = 0; height < mChartHeight; ++height)
   {

@@ -7,6 +7,7 @@
 #include "LiquidCrystalChart.h"
 #include "Button.h"
 #include "Adafruit_BMP280.h"
+#include <array>
 
 Adafruit_BMP280* bmp = new Adafruit_BMP280();
 Ds18b20* outsideTemp = new Ds18b20(PB11);
@@ -29,14 +30,12 @@ uint8_t menuPosition = 0; // pages
 uint8_t menuParameter = 0; // 0 = temp out, 1 = pressure, 2 = temp in
 
 bool firstRun = true;
-float currentValues[3];
-float differences[3];
-float minValues[3];
-float maxValues[3];
-float longTermMin[3];
-float longTermMax[3]; 
-uint32_t countOfMeasures = 0;
-uint8_t dailyGraph[3][DISPLAY_BARS];
+std::array<uint8_t, DISPLAY_BARS> chartInTemp;
+std::array<uint8_t, DISPLAY_BARS> chartInMedian;
+std::array<uint8_t, DISPLAY_BARS> chartOutTemp;
+std::array<uint8_t, DISPLAY_BARS> chartOutMedian;
+std::array<uint8_t, DISPLAY_BARS> chartPressure;
+std::array<uint8_t, DISPLAY_BARS> chartPressureMedian;
 
 #define KEY(a,b)  ((a<<8) | b)
 
@@ -47,9 +46,6 @@ void setup(void)
     bmp->begin();
     lcd->begin();
     barChar->createBarLevels();
-    for(uint8_t i = 0; i < DISPLAY_BARS; ++i)
-      for(uint8_t j = 0; j < 3; ++j)
-        dailyGraph[j][i] = 0;
     Serial.begin(9600);
 }
 
@@ -174,76 +170,32 @@ void hourUpdate()
   outTempMonitor->setNewValue(outsideTemp->getCelsiusTemp(0));
   pressureMonitor->setNewValue(bmp->readPressure());
   inTempMonitor->setNewValue(bmp->readTemperature()); //TODO how to median graph
-  
-  updateGraph(*outTempMonitor, 0);
-  updateGraph(*pressureMonitor, 1);
-  updateGraph(*inTempMonitor, 2);
-}
 
-void updateGraph(const ValueMonitor& valueMonitor, const uint8_t param)
-{
-  uint8_t samplesAtBar = DAY_SAMPLES / DISPLAY_BARS;  //TODO how to median graph
-  for(uint8_t bar = 0; bar < DISPLAY_BARS; ++bar)
-  {
-    uint8_t leftSample = samplesAtBar * bar;
-    uint8_t rightSample = leftSample + samplesAtBar;
-    float averageForBar = 0;
-    float sumOfAll = 0;
-    uint8_t count = 0;
-    bool foundMaxBar = false;
-    bool foundMinBar = false;
-    for(uint8_t sample = leftSample; sample < rightSample; ++sample)
-    { // calculate average with more samples to one bar          
-      float value = 0;
-      if(valueMonitor.getValue(sample, value))     //TODO how to median graph
-      {
-        sumOfAll += value;
-        ++count;
-        if(value == valueMonitor.getMaxValue())    //TODO how to median graph
-          foundMaxBar = true;
-        if(value == valueMonitor.getMinValue())    //TODO how to median graph
-          foundMinBar = true;
-      }   
-    }
-    if(count > 0 && sumOfAll > 0)
-      averageForBar = sumOfAll / count;
-    else
-      averageForBar = 0;
-    uint8_t inversIndex = DISPLAY_BARS - 1 - bar;
-    if(count == samplesAtBar)
-    {
-      uint8_t level = 255 * ((averageForBar - valueMonitor.getMinValue()) / valueMonitor.getDifferenceValue());    //TOTOK
-      if(foundMaxBar && foundMinBar)
-        dailyGraph[param][inversIndex] = level; //almost impossible
-      else if(foundMaxBar)
-        dailyGraph[param][inversIndex] = 255;   //optimise fit to above level
-      else if(foundMinBar)
-        dailyGraph[param][inversIndex] = 0;     //optimise fit to below level
-      else
-        dailyGraph[param][inversIndex] = level; //standard scenario        
-    }      
-    else
-      dailyGraph[param][inversIndex] = 0;      //empty data storage
-  }
+  outTempMonitor->calculateScaledValuesToChart(chartOutTemp, DISPLAY_BARS);
+  //outTempMonitor->calculateScaledValuesToChart(chartOutTempMedian,DISPLAY_BARS, ValueMonitor::MW_MEDIAN_DATA);
+  //pressureMonitor->calculateScaledValuesToChart(chartPressure, DISPLAY_BARS);
+  //pressureMonitor->calculateScaledValuesToChart(chartPressureMedian,DISPLAY_BARS, ValueMonitor::MW_MEDIAN_DATA);
+  //inTempMonitor->calculateScaledValuesToChart(chartInTemp, DISPLAY_BARS);
+  //inTempMonitor->calculateScaledValuesToChart(chartInTempMedian,DISPLAY_BARS, ValueMonitor::MW_MEDIAN_DATA);
 }
 
 void showTempOutMainScreen()
 {
-   chartBar->plotChart(dailyGraph[0]);
+   chartBar->plotChart(chartOutTemp);
    showCelsiusTemperatureLeft(0, 0, outTempMonitor->getCurrentValue());
    showCelsiusTemperatureRight(12, 0, outTempMonitor->getDifferenceValue());
 }
 
 void showPressureMainScreen()
 {   
-   chartBar->plotChart(dailyGraph[1]);
+   chartBar->plotChart(chartPressure);
    showPressureLeft(0, 0, pressureMonitor->getCurrentValue());
    showPressureRight(13, 0, pressureMonitor->getDifferenceValue());
 }
 
 void showTempInMainScreen()
 {   
-   chartBar->plotChart(dailyGraph[2]);
+   chartBar->plotChart(chartInTemp);
    showCelsiusTemperatureLeft(0, 0, inTempMonitor->getCurrentValue());
    showCelsiusTemperatureRight(12, 0, inTempMonitor->getDifferenceValue());
 }

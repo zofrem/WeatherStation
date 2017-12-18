@@ -2,6 +2,7 @@
 #define LOOPRECORDER_H
 
 #include <inttypes.h>
+#include <limits>
 
 /////////////////////////////////////////////////////////
 /// LoopRecorder 
@@ -12,7 +13,7 @@ template <typename T>
 class LoopRecorder
 {  
 public:
-  LoopRecorder(const unsigned int size) : mMaxMemoryIndex(size - 1)        //size is compared as index - 1
+  LoopRecorder(const unsigned int size) : mMaxMemoryIndex(size - 1), mBiggest(std::numeric_limits<T>::max()), mSmallest(std::numeric_limits<T>::min())
   {
     mIndex = 0;
     mEndOfMemory = false;          
@@ -38,6 +39,9 @@ public:
     {
       ++mIndex;   
     }
+    findMinExtrem(); //TODO optimize because in same cases you not need to calculate
+    findMaxExtrem(); //TODO use new value, last value, max or min Value to find extrem easily
+    //TODO if last is extrem and new one also you need to brutal force via findXxxExtrem
   };
 
   bool getLastSample(uint8_t pastTimeSample, T& returnValue) const
@@ -58,16 +62,64 @@ public:
       uint8_t previousCycleIndex = pastTimeSample - mIndex;  //how deep is index from the end of the memory
       indexAtPast = mMaxMemoryIndex - previousCycleIndex;    //for this case set correct indexAtPast respect to allocated memory size
     }
-    returnValue = mLoopMemory[indexAtPast];   
+    returnValue = mLoopMemory[indexAtPast]; //TODO maybe return pointer not copy
     return true;    
   }
- 
+
+  const T& getMinExtrem() const
+  {
+    return mMinValue;
+  };
+
+  const T& getMaxExtrem() const
+  {
+    return mMaxValue;
+  };
+
 private:
   LoopRecorder(const LoopRecorder& paste);
+  void findMinExtrem()
+  {
+    T minValue = mBiggest;
+    T value;
+    for(uint8_t i = 0; i < mMaxMemoryIndex; ++i)
+    {
+      if(getLastSample(i, value))
+      {
+        if(minValue > value)
+          minValue = value;
+      }
+      else
+        break;
+    }
+    mMinValue = minValue;
+  };
+
+  void findMaxExtrem()
+  {
+  T maxValue = mSmallest;
+  T value;
+  for(uint8_t i = 0; i < mMaxMemoryIndex; ++i)
+  {
+    if(getLastSample(i, value))
+    {
+      if(maxValue < value)
+        maxValue = value;
+    }
+    else
+      break;
+  }
+  mMaxValue = maxValue;
+  };
+
   const uint8_t mMaxMemoryIndex;
   uint8_t mIndex;
   bool mEndOfMemory;
+  const float mBiggest;
+  const float mSmallest;
   T* mLoopMemory;
+  T mMaxValue;
+  T mMinValue;
 };
 
 #endif
