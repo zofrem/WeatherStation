@@ -47,6 +47,12 @@ void setup(void)
     lcd->begin();
     barChar->createBarLevels();
     Serial.begin(9600);
+    chartInTemp.fill(0);
+    chartInMedian.fill(0);
+    chartOutTemp.fill(0);
+    chartOutMedian.fill(0);
+    chartPressure.fill(0);
+    chartPressureMedian.fill(0);
 }
 
 
@@ -173,16 +179,18 @@ void hourUpdate()
 
   outTempMonitor->calculateScaledValuesToChart(chartOutTemp, DISPLAY_BARS);
   //outTempMonitor->calculateScaledValuesToChart(chartOutTempMedian,DISPLAY_BARS, ValueMonitor::MW_MEDIAN_DATA);
-  //pressureMonitor->calculateScaledValuesToChart(chartPressure, DISPLAY_BARS);
+  pressureMonitor->calculateScaledValuesToChart(chartPressure, DISPLAY_BARS);
   //pressureMonitor->calculateScaledValuesToChart(chartPressureMedian,DISPLAY_BARS, ValueMonitor::MW_MEDIAN_DATA);
-  //inTempMonitor->calculateScaledValuesToChart(chartInTemp, DISPLAY_BARS);
+  inTempMonitor->calculateScaledValuesToChart(chartInTemp, DISPLAY_BARS);
   //inTempMonitor->calculateScaledValuesToChart(chartInTempMedian,DISPLAY_BARS, ValueMonitor::MW_MEDIAN_DATA);
 }
 
 void showTempOutMainScreen()
 {
    chartBar->plotChart(chartOutTemp);
-   showCelsiusTemperatureLeft(0, 0, outTempMonitor->getCurrentValue());
+   //showCelsiusTemperatureLeft(0, 0, outTempMonitor->getCurrentValue());
+   lcd->setCursor(0,0);
+   lcd->print(static_cast<int>(chartOutTemp[19]));
    showCelsiusTemperatureRight(12, 0, outTempMonitor->getDifferenceValue());
 }
 

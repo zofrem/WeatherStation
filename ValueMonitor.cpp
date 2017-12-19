@@ -140,36 +140,4 @@ float ValueMonitor::getRangeAverage(const LoopRecorder<float>& data, const uint8
   return averageForBar;
 }
 
-uint8_t ValueMonitor::calculateScaledValuesToChart(std::array<uint8_t, 20>& chart, const uint8_t chartBars, const MonitorWiew monitorView) const
-{
-  // if monitorView
-  LoopRecorder<float>* valueMonitor = mValues;
-  uint8_t samplesAtBar = mMonitorSize / chartBars;  //TODO how to median graph
-  for(uint8_t bar = 0; bar < chartBars; ++bar)
-  {
-    uint8_t leftSample = samplesAtBar * bar;
-    uint8_t rightSample = leftSample + samplesAtBar;
-    float sumOfAll = 0;
-    uint8_t count = 0;
-    bool foundMaxBar = false;
-    bool foundMinBar = false;
 
-    float averageForBar = getRangeAverage(*valueMonitor, leftSample, rightSample, foundMaxBar, foundMinBar);
-
-    uint8_t inversIndex = chartBars - 1 - bar;
-    if(count == samplesAtBar)
-    {
-      uint8_t level = 255 * ((averageForBar - valueMonitor->getMinExtrem()) / (valueMonitor->getMaxExtrem() - valueMonitor->getMinExtrem()));    //getDifferenceValue here use polymorphismus function
-      if(foundMaxBar && foundMinBar)
-        chart[bar] = level; //almost impossible
-      else if(foundMaxBar)
-        chart[bar] = 255;   //optimise fit to above level
-      else if(foundMinBar)
-        chart[bar] = 0;     //optimise fit to below level
-      else
-        chart[bar] = level; //standard scenario
-    }
-    else
-      chart[bar] = 0;      //empty data storage
-  }
-}
