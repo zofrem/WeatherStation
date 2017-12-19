@@ -69,16 +69,16 @@ class ValueMonitor {
         {
           uint8_t level = 255 * ((averageForBar - valueMonitor->getMinExtrem()) / (valueMonitor->getMaxExtrem() - valueMonitor->getMinExtrem()));    //getDifferenceValue here use polymorphismus function
           if(foundMaxBar && foundMinBar)
-            chart[bar] = level; //almost impossible
+            chart[inversIndex] = level; //almost impossible
           else if(foundMaxBar)
-            chart[bar] = 255;   //optimise fit to above level
+            chart[inversIndex] = 255;   //optimise fit to above level
           else if(foundMinBar)
-            chart[bar] = 0;     //optimise fit to below level
+            chart[inversIndex] = 0;     //optimise fit to below level
           else
-            chart[bar] = level; //standard scenario
+            chart[inversIndex] = level; //standard scenario
         }
         else
-          chart[bar] = 0;      //empty data storage
+          chart[inversIndex] = 0;      //empty data storage
       }
     }
 

@@ -188,9 +188,7 @@ void hourUpdate()
 void showTempOutMainScreen()
 {
    chartBar->plotChart(chartOutTemp);
-   //showCelsiusTemperatureLeft(0, 0, outTempMonitor->getCurrentValue());
-   lcd->setCursor(0,0);
-   lcd->print(static_cast<int>(chartOutTemp[19]));
+   showCelsiusTemperatureLeft(0, 0, outTempMonitor->getCurrentValue());
    showCelsiusTemperatureRight(12, 0, outTempMonitor->getDifferenceValue());
 }
 
