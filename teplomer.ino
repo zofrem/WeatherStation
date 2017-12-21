@@ -18,6 +18,7 @@ const uint8_t DISPLAY_ROWS = 4;
 const uint8_t MENU_SCREENS = 4;
 BarChars* barChar =  new BarChars(*lcd);
 LiquidCrystalChart* chartBar = new LiquidCrystalChart(*lcd, *barChar, 0, 1, 3, DISPLAY_BARS);
+LiquidCrystalChart* chartBarSmall = new LiquidCrystalChart(*lcd, *barChar, 0, 2, 3, DISPLAY_BARS);
 ValueMonitor* outTempMonitor = new ValueMonitor(DAY_SAMPLES);
 ValueMonitor* pressureMonitor = new ValueMonitor(DAY_SAMPLES);
 ValueMonitor* inTempMonitor = new ValueMonitor(DAY_SAMPLES);
@@ -31,9 +32,9 @@ uint8_t menuParameter = 0; // 0 = temp out, 1 = pressure, 2 = temp in
 
 bool firstRun = true;
 std::array<uint8_t, DISPLAY_BARS> chartInTemp;
-std::array<uint8_t, DISPLAY_BARS> chartInMedian;
+std::array<uint8_t, DISPLAY_BARS> chartInTempMedian;
 std::array<uint8_t, DISPLAY_BARS> chartOutTemp;
-std::array<uint8_t, DISPLAY_BARS> chartOutMedian;
+std::array<uint8_t, DISPLAY_BARS> chartOutTempMedian;
 std::array<uint8_t, DISPLAY_BARS> chartPressure;
 std::array<uint8_t, DISPLAY_BARS> chartPressureMedian;
 
@@ -48,9 +49,9 @@ void setup(void)
     barChar->createBarLevels();
     Serial.begin(9600);
     chartInTemp.fill(0);
-    chartInMedian.fill(0);
+    chartInTempMedian.fill(0);
     chartOutTemp.fill(0);
-    chartOutMedian.fill(0);
+    chartOutTempMedian.fill(0);
     chartPressure.fill(0);
     chartPressureMedian.fill(0);
 }
@@ -61,7 +62,7 @@ void loop(void)
   bool measureUpdate = false;
   showBeginScreenProcedure();
     
-  if(measure->timer())
+  if(measure->timer()) //TODO not update when user button movement
   {
     hourUpdate();
     measureUpdate = true;
@@ -178,17 +179,18 @@ void hourUpdate()
   inTempMonitor->setNewValue(bmp->readTemperature()); //TODO how to median graph
 
   outTempMonitor->calculateScaledValuesToChart(chartOutTemp, DISPLAY_BARS);
-  //outTempMonitor->calculateScaledValuesToChart(chartOutTempMedian,DISPLAY_BARS, ValueMonitor::MW_MEDIAN_DATA);
+  outTempMonitor->calculateScaledValuesToChart(chartOutTempMedian, DISPLAY_BARS, ValueMonitor::MW_MEDIAN_DATA);
   pressureMonitor->calculateScaledValuesToChart(chartPressure, DISPLAY_BARS);
-  //pressureMonitor->calculateScaledValuesToChart(chartPressureMedian,DISPLAY_BARS, ValueMonitor::MW_MEDIAN_DATA);
+  pressureMonitor->calculateScaledValuesToChart(chartPressureMedian, DISPLAY_BARS, ValueMonitor::MW_MEDIAN_DATA);
   inTempMonitor->calculateScaledValuesToChart(chartInTemp, DISPLAY_BARS);
-  //inTempMonitor->calculateScaledValuesToChart(chartInTempMedian,DISPLAY_BARS, ValueMonitor::MW_MEDIAN_DATA);
+  inTempMonitor->calculateScaledValuesToChart(chartInTempMedian, DISPLAY_BARS, ValueMonitor::MW_MEDIAN_DATA);
 }
 
 void showTempOutMainScreen()
 {
    chartBar->plotChart(chartOutTemp);
    showCelsiusTemperatureLeft(0, 0, outTempMonitor->getCurrentValue());
+   clearChars(8,11,0);
    showCelsiusTemperatureRight(12, 0, outTempMonitor->getDifferenceValue());
 }
 
@@ -196,70 +198,72 @@ void showPressureMainScreen()
 {   
    chartBar->plotChart(chartPressure);
    showPressureLeft(0, 0, pressureMonitor->getCurrentValue());
-   showPressureRight(13, 0, pressureMonitor->getDifferenceValue());
+   clearChars(8,11,0);
+   showPressureRight(12, 0, pressureMonitor->getDifferenceValue());
 }
 
 void showTempInMainScreen()
 {   
    chartBar->plotChart(chartInTemp);
    showCelsiusTemperatureLeft(0, 0, inTempMonitor->getCurrentValue());
+   clearChars(8,11,0);
    showCelsiusTemperatureRight(12, 0, inTempMonitor->getDifferenceValue());
 }
 
 void showMinMaxTempOutScreen()
 {
   lcd->setCursor(0,0);
-  lcd->printstr("VonkuMini_24:");
+  lcd->printstr("Vonku Min24:");
   showCelsiusTemperatureRight(12, 0, outTempMonitor->getMinValue());
   
   lcd->setCursor(0,1);
-  lcd->printstr("VonkuMaxi_24:");
+  lcd->printstr("Vonku Max24:");
   showCelsiusTemperatureRight(12, 1, outTempMonitor->getMaxValue());
 
   lcd->setCursor(0,2);
-  lcd->printstr("VonkuMinimal:");
+  lcd->printstr("Vonku Min:  ");
   showCelsiusTemperatureRight(12, 2, outTempMonitor->getLongTermMinValue());
   
   lcd->setCursor(0,3);
-  lcd->printstr("VonkuMaximal:");
+  lcd->printstr("Vonku Max:  ");
   showCelsiusTemperatureRight(12, 3, outTempMonitor->getLongTermMaxValue());
 }
 
 void showMinMaxPressScreen()
 {
   lcd->setCursor(0,0);
-  lcd->printstr("TlakMini_24:");
-  showPressureRight(13, 0, pressureMonitor->getMinValue());
+  lcd->printstr("Tlak Min24: ");
+  showPressureRight(12, 0, pressureMonitor->getMinValue());
   
   lcd->setCursor(0,1);
-  lcd->printstr("TlakMaxi_24:");
-  showPressureRight(13, 1, pressureMonitor->getMaxValue());
+  lcd->printstr("Tlak Max24: ");
+  showPressureRight(12, 1, pressureMonitor->getMaxValue());
 
   lcd->setCursor(0,2);
-  lcd->printstr("TlakMinimal:");
-  showPressureRight(13, 2, pressureMonitor->getLongTermMinValue());
+  lcd->printstr("Tlak Min:   ");
+  showPressureRight(12, 2, pressureMonitor->getLongTermMinValue());
   
   lcd->setCursor(0,3);
-  lcd->printstr("TlakMaximal:");
-  showPressureRight(13, 3, pressureMonitor->getLongTermMaxValue());
+  lcd->printstr("Tlak Max:   ");
+  showPressureRight(12, 3, pressureMonitor->getLongTermMaxValue());
 }
 
 void showMinMaxTempInScreen()
 {
   lcd->setCursor(0,0);
-  lcd->printstr("InterMini_24:");
+  lcd->printstr("Dnu Min24:  ");
   showCelsiusTemperatureRight(12, 0, inTempMonitor->getMinValue());
   
   lcd->setCursor(0,1);
-  lcd->printstr("InterMaxi_24:");
+  lcd->printstr("Dnu Max24:  ");
   showCelsiusTemperatureRight(12, 1, inTempMonitor->getMaxValue());
 
   lcd->setCursor(0,2);
-  lcd->printstr("InterMinimal:");
+  lcd->printstr("Dnu Minimal:");
   showCelsiusTemperatureRight(12, 2, inTempMonitor->getLongTermMinValue());
   
   lcd->setCursor(0,3);
-  lcd->printstr("InterMaximal:");
+  lcd->printstr("Dnu Maximal:");
   showCelsiusTemperatureRight(12, 3, inTempMonitor->getLongTermMaxValue());
 }
 
@@ -279,8 +283,8 @@ void showInfoScreen()
   clearChars(8, DISPLAY_BARS - digits, 1);
   lcd->setCursor(DISPLAY_BARS - digits, 1);
   lcd->print(days);
-  clearChars(0, 20, 2);
-  clearChars(0, 20, 3);
+  clearChars(0, 19, 2);
+  clearChars(0, 19, 3);
 }
 
 void showTempOutDayComparationScreen()
@@ -299,9 +303,10 @@ void showTempOutDayComparationScreen()
       dayDiffTemp *= -1;
     }
     showCelsiusTemperatureLeft(0, 1, dayDiffTemp);
+    chartBarSmall->plotChart(chartOutTempMedian);
   }
   else
-    lcd->printstr("Pockaj 24 hodin ");
+    show24wait();
 }
 
 void showPressDayComparationScreen()
@@ -320,9 +325,10 @@ void showPressDayComparationScreen()
       dayDiffTemp *= -1;
     }
     showCelsiusTemperatureLeft(0, 1, dayDiffTemp);
+    chartBarSmall->plotChart(chartPressureMedian);
   }
   else
-    lcd->printstr("Pockaj 24 hodin ");
+    show24wait();
 }
 
 void showTempInDayComparationScreen()
@@ -341,18 +347,30 @@ void showTempInDayComparationScreen()
       dayDiffTemp *= -1;
     }
     showCelsiusTemperatureLeft(0, 1, dayDiffTemp);
+    chartBarSmall->plotChart(chartInTempMedian);
   }
   else
-    lcd->printstr("Pockaj 24 hodin ");
+    show24wait();
+}
+
+void show24wait()
+{
+  uint32_t hours = (DAY_SAMPLES - outTempMonitor->getValuesCount())/ 10;
+  lcd->printstr("Pockajte hodin:   ");
+  lcd->setCursor(DISPLAY_BARS - numDigits(hours),0);
+  lcd->print(hours);
+  clearChars(0, 19, 1);
+  clearChars(0, 19, 2);
+  clearChars(0, 19, 3);
 }
 
 bool dayComparationScreen(const ValueMonitor& valueMonitor, float& dayDiff)
 {
   lcd->setCursor(0,0);
   float dayAgo = 0;
-  if(valueMonitor.getLastValue(dayAgo))
+  if(valueMonitor.getLastValue(dayAgo, ValueMonitor::MW_MEDIAN_DATA))
   {
-    dayDiff = valueMonitor.getCurrentValue() - dayAgo;
+    dayDiff = valueMonitor.getCurrentValue(ValueMonitor::MW_MEDIAN_DATA) - dayAgo;
     return true;  
   }
   else
@@ -412,23 +430,23 @@ void showPressureLeft(uint8_t xCursor, const uint8_t yCursor, const float& press
   lcd->print(static_cast<int>(pressure));
   lcd->setCursor(xCursor + digits, yCursor);
   lcd->printstr("Pa");
-  //clearChars(xCursor + digits + 2, xCursor + 8, yCursor); 
+  clearChars(xCursor + digits + 2, xCursor + 8, yCursor);
 }
 
 void showPressureRight(uint8_t xCursor, const uint8_t yCursor, const float& pressure)
 {
 
   uint8_t digits = numDigits(pressure);
-  lcd->setCursor(xCursor + 5 - digits, yCursor);
+  lcd->setCursor(xCursor + 6 - digits, yCursor);
   lcd->print(static_cast<int>(pressure));
   clearChars(xCursor, xCursor + 5 - digits, yCursor);
-  lcd->setCursor(xCursor + 5, yCursor);
+  lcd->setCursor(xCursor + 6, yCursor);
   lcd->printstr("Pa");
 }
 
 void clearChars(const uint8_t fromX, const uint8_t toX, const uint8_t line)
 {
-  for(uint8_t i = fromX; i < toX; ++i)
+  for(uint8_t i = fromX; i <= toX; ++i)
   {
     lcd->setCursor(i, line);
     lcd->print((char)0x20);

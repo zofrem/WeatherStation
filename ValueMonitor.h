@@ -48,7 +48,7 @@ class ValueMonitor {
     uint32_t getValuesCount() const;
     
     template<size_t T>
-    uint8_t calculateScaledValuesToChart(std::array<uint8_t, T>& chart, const uint8_t chartBars, const MonitorWiew monitorView  = MW_RAW_DATA) const
+    uint8_t calculateScaledValuesToChart(std::array<uint8_t, T>& chart, const uint8_t chartBars, const MonitorWiew monitorView = MW_RAW_DATA) const
     {
       // if monitorView
       LoopRecorder<float>* valueMonitor = mValues;
@@ -62,12 +62,14 @@ class ValueMonitor {
         bool foundMaxBar = false;
         bool foundMinBar = false;
     
-        float averageForBar = getRangeAverage(*valueMonitor, leftSample, rightSample, foundMaxBar, foundMinBar);
+        float averageForBar = getRangeAverage(*valueMonitor, leftSample, rightSample, foundMaxBar, foundMinBar, count);
     
         uint8_t inversIndex = chartBars - 1 - bar;
         if(count == samplesAtBar)
         {
-          uint8_t level = 255 * ((averageForBar - valueMonitor->getMinExtrem()) / (valueMonitor->getMaxExtrem() - valueMonitor->getMinExtrem()));    //getDifferenceValue here use polymorphismus function
+          float scopeDifference = valueMonitor->getMaxExtrem() - valueMonitor->getMinExtrem();
+          float averageHight = averageForBar - valueMonitor->getMinExtrem();
+          uint8_t level = 255 * (averageHight / scopeDifference);
           if(foundMaxBar && foundMinBar)
             chart[inversIndex] = level; //almost impossible
           else if(foundMaxBar)
@@ -86,7 +88,7 @@ class ValueMonitor {
     ValueMonitor(const ValueMonitor& timer);
     void getlongTermMinMax();    //TODO const anc calculate longTERM split
     void calculateMedian();
-    float getRangeAverage(const LoopRecorder<float>& data, const uint8_t leftValue, const uint8_t rightValue, bool& foundMaxBar, bool& foundMinBar) const;
+    float getRangeAverage(const LoopRecorder<float>& data, const uint8_t leftValue, const uint8_t rightValue, bool& foundMaxBar, bool& foundMinBar, uint8_t& count) const;
     //variables
     LoopRecorder<float>* mValues;
     LoopRecorder<float>* mMedianValues;

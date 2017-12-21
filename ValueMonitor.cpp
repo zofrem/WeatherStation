@@ -115,11 +115,10 @@ uint32_t ValueMonitor::getValuesCount() const
 // range from index left to index right
 // return average, if exist whole monitor extrems min/max
 /////////////////////////////////////////////////////
-float ValueMonitor::getRangeAverage(const LoopRecorder<float>& data, const uint8_t leftValue, const uint8_t rightValue, bool& foundMaxBar, bool& foundMinBar) const
+float ValueMonitor::getRangeAverage(const LoopRecorder<float>& data, const uint8_t leftValue, const uint8_t rightValue, bool& foundMaxBar, bool& foundMinBar, uint8_t& count) const
 {
   float averageForBar = 0;
   float sumOfAll = 0;
-  uint8_t count = 0;
   for(uint8_t sample = leftValue; sample < rightValue; ++sample)
   { // calculate average from range of values
     float value = 0;
@@ -133,7 +132,7 @@ float ValueMonitor::getRangeAverage(const LoopRecorder<float>& data, const uint8
         foundMinBar = true;
     }
   }
-  if(count > 0 && sumOfAll > 0)
+  if(count > 0)
     averageForBar = sumOfAll / count;
   else
     averageForBar = 0;

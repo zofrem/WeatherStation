@@ -82,7 +82,7 @@ private:
   {
     T minValue = mBiggest;
     T value;
-    for(uint8_t i = 0; i < mMaxMemoryIndex; ++i)
+    for(uint8_t i = 0; i <= mMaxMemoryIndex; ++i)
     {
       if(getLastSample(i, value))
       {
@@ -99,7 +99,7 @@ private:
   {
   T maxValue = mSmallest;
   T value;
-  for(uint8_t i = 0; i < mMaxMemoryIndex; ++i)
+  for(uint8_t i = 0; i <= mMaxMemoryIndex; ++i)
   {
     if(getLastSample(i, value))
     {
