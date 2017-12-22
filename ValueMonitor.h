@@ -50,8 +50,7 @@ class ValueMonitor {
     template<size_t T>
     uint8_t calculateScaledValuesToChart(std::array<uint8_t, T>& chart, const uint8_t chartBars, const MonitorWiew monitorView = MW_RAW_DATA) const
     {
-      // if monitorView
-      LoopRecorder<float>* valueMonitor = mValues;
+      LoopRecorder<float>* valueMonitor = (monitorView == MW_RAW_DATA) ? mValues : mMedianValues;
       uint8_t samplesAtBar = mMonitorSize / chartBars;
       for(uint8_t bar = 0; bar < chartBars; ++bar)
       {

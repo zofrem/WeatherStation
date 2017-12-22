@@ -18,7 +18,7 @@ const uint8_t DISPLAY_ROWS = 4;
 const uint8_t MENU_SCREENS = 4;
 BarChars* barChar =  new BarChars(*lcd);
 LiquidCrystalChart* chartBar = new LiquidCrystalChart(*lcd, *barChar, 0, 1, 3, DISPLAY_BARS);
-LiquidCrystalChart* chartBarSmall = new LiquidCrystalChart(*lcd, *barChar, 0, 2, 3, DISPLAY_BARS);
+LiquidCrystalChart* chartBarSmall = new LiquidCrystalChart(*lcd, *barChar, 0, 2, 2, DISPLAY_BARS);
 ValueMonitor* outTempMonitor = new ValueMonitor(DAY_SAMPLES);
 ValueMonitor* pressureMonitor = new ValueMonitor(DAY_SAMPLES);
 ValueMonitor* inTempMonitor = new ValueMonitor(DAY_SAMPLES);
@@ -293,16 +293,20 @@ void showTempOutDayComparationScreen()
   float dayDiffTemp = 0;
   if(dayComparationScreen(*outTempMonitor, dayDiffTemp))
   {
+    showCelsiusTemperatureLeft(0, 0, outTempMonitor->getCurrentValue(ValueMonitor::MW_MEDIAN_DATA));
+    clearChars(8,11,0);
+    showCelsiusTemperatureRight(12, 0, outTempMonitor->getDifferenceValue(ValueMonitor::MW_MEDIAN_DATA));
+    lcd->setCursor(0,1);
     if(dayDiffTemp > 0)
-      lcd->printstr("Dnes teplejsie:");
+      lcd->printstr("Dnes lepsie:");
     else if(dayDiffTemp == 0)
-      lcd->printstr("Dnes ako vcera:");
+      lcd->printstr("Dnes zhodne:");
     else
     {
-      lcd->printstr("Dnes chladnejsie o");
+      lcd->printstr("Dnes zimsie:");
       dayDiffTemp *= -1;
     }
-    showCelsiusTemperatureLeft(0, 1, dayDiffTemp);
+    showCelsiusTemperatureRight(12, 1, dayDiffTemp);
     chartBarSmall->plotChart(chartOutTempMedian);
   }
   else
@@ -315,16 +319,21 @@ void showPressDayComparationScreen()
   float dayDiffTemp = 0;
   if(dayComparationScreen(*pressureMonitor, dayDiffTemp))
   {
+    showPressureLeft(0, 0, pressureMonitor->getCurrentValue(ValueMonitor::MW_MEDIAN_DATA));
+    clearChars(8,11,0);
+    showPressureRight(12, 0, pressureMonitor->getDifferenceValue(ValueMonitor::MW_MEDIAN_DATA));
+    lcd->setCursor(0,1);
+    
     if(dayDiffTemp > 0)
-      lcd->printstr("Dnes vyssi:");
+      lcd->printstr("Dnes vyssi: ");
     else if(dayDiffTemp == 0)
-      lcd->printstr("Dnes ako vcera:");
+      lcd->printstr("Dnes zhodne:");
     else
     {
-      lcd->printstr("Dnes nizsi:");
+      lcd->printstr("Dnes nizsi: ");
       dayDiffTemp *= -1;
     }
-    showCelsiusTemperatureLeft(0, 1, dayDiffTemp);
+    showPressureRight(12, 1, dayDiffTemp);
     chartBarSmall->plotChart(chartPressureMedian);
   }
   else
@@ -337,16 +346,21 @@ void showTempInDayComparationScreen()
   float dayDiffTemp = 0;
   if(dayComparationScreen(*inTempMonitor, dayDiffTemp))
   {
+    showCelsiusTemperatureLeft(0, 0, inTempMonitor->getCurrentValue(ValueMonitor::MW_MEDIAN_DATA));
+    clearChars(8,11,0);
+    showCelsiusTemperatureRight(12, 0, inTempMonitor->getDifferenceValue(ValueMonitor::MW_MEDIAN_DATA));
+    lcd->setCursor(0,1);
+
     if(dayDiffTemp > 0)
-      lcd->printstr("Dnes teplejsie:");
+      lcd->printstr("Dnes lepsie:");
     else if(dayDiffTemp == 0)
-      lcd->printstr("Dnes ako vcera:");
+      lcd->printstr("Dnes zhodne:");
     else
     {
-      lcd->printstr("Dnes chladnejsie o");
+      lcd->printstr("Dnes zimsie:");
       dayDiffTemp *= -1;
     }
-    showCelsiusTemperatureLeft(0, 1, dayDiffTemp);
+    showCelsiusTemperatureRight(12, 1, dayDiffTemp);
     chartBarSmall->plotChart(chartInTempMedian);
   }
   else
@@ -355,9 +369,11 @@ void showTempInDayComparationScreen()
 
 void show24wait()
 {
+  lcd->printstr("Pockajte hodin:");
   uint32_t hours = (DAY_SAMPLES - outTempMonitor->getValuesCount())/ 10;
-  lcd->printstr("Pockajte hodin:   ");
-  lcd->setCursor(DISPLAY_BARS - numDigits(hours),0);
+  uint8_t digits = numDigits(hours);
+  clearChars(15, DISPLAY_BARS - digits, 0);
+  lcd->setCursor(DISPLAY_BARS - digits, 0);
   lcd->print(hours);
   clearChars(0, 19, 1);
   clearChars(0, 19, 2);
