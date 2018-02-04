@@ -10,7 +10,7 @@
 #include <array>
 
 Adafruit_BMP280* bmp = new Adafruit_BMP280();
-Ds18b20* outsideTemp = new Ds18b20(PB11);
+Ds18b20* outsideTemp = new Ds18b20(PB12);
 LiquidCrystal_I2C* lcd = new LiquidCrystal_I2C(0x3F, 20, 4);
 const uint8_t DAY_SAMPLES = 240; // sample each six minute for a whole day
 const uint8_t DISPLAY_BARS = 20;
@@ -22,11 +22,11 @@ LiquidCrystalChart* chartBarSmall = new LiquidCrystalChart(*lcd, *barChar, 0, 2,
 ValueMonitor* outTempMonitor = new ValueMonitor(DAY_SAMPLES);
 ValueMonitor* pressureMonitor = new ValueMonitor(DAY_SAMPLES);
 ValueMonitor* inTempMonitor = new ValueMonitor(DAY_SAMPLES);
-LoopTimer* measure = new LoopTimer(4000); //360000
-LoopTimer* control = new LoopTimer(10000);  //10000
-Button* buttTemp = new Button(PB12);
-Button* buttPress = new Button(PB13);
-Button* buttHumi = new Button(PB14);
+LoopTimer* measure = new LoopTimer(360000); //360000
+LoopTimer* control = new LoopTimer(25000);  //10000
+Button* buttTemp = new Button(PB15);
+Button* buttPress = new Button(PB14);
+Button* buttHumi = new Button(PB13);
 uint8_t menuPosition = 0; // pages
 uint8_t menuParameter = 0; // 0 = temp out, 1 = pressure, 2 = temp in
 
@@ -383,11 +383,17 @@ void show24wait()
 bool dayComparationScreen(const ValueMonitor& valueMonitor, float& dayDiff)
 {
   lcd->setCursor(0,0);
-  float dayAgo = 0;
-  if(valueMonitor.getLastValue(dayAgo, ValueMonitor::MW_MEDIAN_DATA))
+  float current = 0;
+  if(valueMonitor.getValue(0, current, ValueMonitor::MW_MEDIAN_DATA))
   {
-    dayDiff = valueMonitor.getCurrentValue(ValueMonitor::MW_MEDIAN_DATA) - dayAgo;
-    return true;  
+    float dayBefore = 0; 					  //first median data present after 24h
+  	if(!valueMonitor.getLastValue(dayBefore, ValueMonitor::MW_MEDIAN_DATA))
+  	{
+	 	  valueMonitor.getValue(0, current);    //after 24h are not present all medians
+		  valueMonitor.getLastValue(dayBefore); //than show only raw values next 24h
+	  }
+	  dayDiff = current - dayBefore;
+	  return true;
   }
   else
   {
@@ -398,9 +404,9 @@ bool dayComparationScreen(const ValueMonitor& valueMonitor, float& dayDiff)
 void showWelcomeScreen()
 {
   lcd->setCursor(0,0);
-  lcd->printstr("Jozef Lukac 2017");
+  lcd->printstr("Jozef Lukac 2018");
   lcd->setCursor(0,1);
-  lcd->printstr("Teplomer STM v1.1");
+  lcd->printstr("Teplomer STM v1.2");
 }
 
 void showCelsiusTemperatureLeft(uint8_t xCursor, const uint8_t yCursor, const float& temperature)

@@ -13,23 +13,16 @@ void ValueMonitor::setNewValue(const float value)
 float ValueMonitor::getCurrentValue(const MonitorWiew monitorView) const
 {
   float value = 0;
-    getValue(0, value, monitorView);
+    getValue(0, value, monitorView); // attention check whether exist
   return value;
 }
 
-bool ValueMonitor::getValue(const uint8_t index, float& value, const MonitorWiew monitorView = MW_RAW_DATA) const
+bool ValueMonitor::getValue(const uint8_t index, float& value, const MonitorWiew monitorView) const
 {
   if(monitorView == MW_RAW_DATA)
     return mValues->getLastSample(index, value);
   else
-  {
-    if(mValuesCount >= mMonitorSize)
-    {
-      mMedianValues->getLastSample(index, value);
-      return true;
-    }
-    return false;
-  }
+     return mMedianValues->getLastSample(index, value);
 }
 
 bool ValueMonitor::getLastValue(float& value, const MonitorWiew monitorView) const //TODO move this logic below to LoopRecorder

@@ -38,7 +38,7 @@ class ValueMonitor {
 
     void setNewValue(const float value);
     float getCurrentValue(const MonitorWiew monitorView = MW_RAW_DATA) const;
-    bool getValue(const uint8_t index, float& value, const MonitorWiew monitorView) const;
+    bool getValue(const uint8_t index, float& value, const MonitorWiew monitorView = MW_RAW_DATA) const;
     bool getLastValue(float& value, const MonitorWiew monitorView = MW_RAW_DATA) const;
     float getDifferenceValue(const MonitorWiew monitorView = MW_RAW_DATA) const;
     float getLongTermMinValue(const MonitorWiew monitorView = MW_RAW_DATA) const;
