@@ -13,7 +13,7 @@
 
 class ValueMonitor {
   public:
-    ValueMonitor(const uint8_t size) : mMonitorSize(size), mBiggest(std::numeric_limits<float>::max()), mSmallest(std::numeric_limits<float>::min())
+    ValueMonitor(const uint8_t size) : mMonitorSize(size), mBiggest(std::numeric_limits<float>::max()), mSmallest(std::numeric_limits<float>::lowest())
     {
       mValuesCount = 0;
       mValues = new LoopRecorder<float>(mMonitorSize);

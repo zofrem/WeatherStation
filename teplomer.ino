@@ -17,7 +17,7 @@ const uint8_t DISPLAY_BARS = 20;
 const uint8_t DISPLAY_ROWS = 4;
 const uint8_t MENU_SCREENS = 4;
 BarChars* barChar =  new BarChars(*lcd);
-LiquidCrystalChart* chartBar = new LiquidCrystalChart(*lcd, *barChar, 0, 1, 3, DISPLAY_BARS);
+LiquidCrystalChart* chartBar = new LiquidCrystalChart(*lcd, *barChar, 0, 0, 3, DISPLAY_BARS);
 LiquidCrystalChart* chartBarSmall = new LiquidCrystalChart(*lcd, *barChar, 0, 2, 2, DISPLAY_BARS);
 ValueMonitor* outTempMonitor = new ValueMonitor(DAY_SAMPLES);
 ValueMonitor* pressureMonitor = new ValueMonitor(DAY_SAMPLES);
@@ -189,25 +189,25 @@ void hourUpdate()
 void showTempOutMainScreen()
 {
    chartBar->plotChart(chartOutTemp);
-   showCelsiusTemperatureLeft(0, 0, outTempMonitor->getCurrentValue());
-   clearChars(8,11,0);
-   showCelsiusTemperatureRight(12, 0, outTempMonitor->getDifferenceValue());
+   showCelsiusTemperatureLeft(0, 3, outTempMonitor->getCurrentValue());
+   clearChars(8,11,3);
+   showCelsiusTemperatureRight(12, 3, outTempMonitor->getDifferenceValue());
 }
 
 void showPressureMainScreen()
 {   
    chartBar->plotChart(chartPressure);
-   showPressureLeft(0, 0, pressureMonitor->getCurrentValue());
-   clearChars(8,11,0);
-   showPressureRight(12, 0, pressureMonitor->getDifferenceValue());
+   showPressureLeft(0, 3, pressureMonitor->getCurrentValue());
+   clearChars(8,11,3);
+   showPressureRight(12, 3, pressureMonitor->getDifferenceValue());
 }
 
 void showTempInMainScreen()
 {   
    chartBar->plotChart(chartInTemp);
-   showCelsiusTemperatureLeft(0, 0, inTempMonitor->getCurrentValue());
-   clearChars(8,11,0);
-   showCelsiusTemperatureRight(12, 0, inTempMonitor->getDifferenceValue());
+   showCelsiusTemperatureLeft(0, 3, inTempMonitor->getCurrentValue());
+   clearChars(8,11,3);
+   showCelsiusTemperatureRight(12, 3, inTempMonitor->getDifferenceValue());
 }
 
 void showMinMaxTempOutScreen()
@@ -406,7 +406,7 @@ void showWelcomeScreen()
   lcd->setCursor(0,0);
   lcd->printstr("Jozef Lukac 2018");
   lcd->setCursor(0,1);
-  lcd->printstr("Teplomer STM v1.2");
+  lcd->printstr("Teplomer STM v1.3");
 }
 
 void showCelsiusTemperatureLeft(uint8_t xCursor, const uint8_t yCursor, const float& temperature)

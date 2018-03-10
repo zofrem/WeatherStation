@@ -13,7 +13,7 @@ template <typename T>
 class LoopRecorder
 {  
 public:
-  LoopRecorder(const unsigned int size) : mMaxMemoryIndex(size - 1), mBiggest(std::numeric_limits<T>::max()), mSmallest(std::numeric_limits<T>::min())
+  LoopRecorder(const unsigned int size) : mMaxMemoryIndex(size - 1), mBiggest(std::numeric_limits<T>::max()), mSmallest(std::numeric_limits<T>::lowest())
   {
     mIndex = 0;
     mEndOfMemory = false;          
